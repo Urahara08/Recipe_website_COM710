@@ -64,39 +64,7 @@ function deleteComment(commentId, commentList) {
   commentList.splice(index, 1);
   return true;
 }
-// Get the textarea field
-const field = document.querySelector('textarea');
-const backUp = field ? field.getAttribute('placeholder') : null;
 
-// Get other DOM elements
-const btn = document.querySelector('.btn');
-const clear = document.getElementById('clear');
-const submit = document.querySelector('#submit');
-
-// Export functions for testing
-function addComment(commentText, commentList) {
-    if (!commentText.trim()) {
-        throw new Error('Comment cannot be empty');
-    }
-
-    const comment = {
-        id: Date.now(),
-        text: commentText,
-    };
-
-    commentList.push(comment);
-    return comment;
-}
-
-function deleteComment(commentId, commentList) {
-    const index = commentList.findIndex((comment) => comment.id === commentId);
-    if (index === -1) {
-        throw new Error('Comment not found');
-    }
-
-    commentList.splice(index, 1);
-    return true;
-}
-
-module.exports = { addComment, deleteComment, backUp };
+// Export the function
+module.exports = { addComment, deleteComment };
 }
