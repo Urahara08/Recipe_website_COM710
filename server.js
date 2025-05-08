@@ -1,20 +1,23 @@
 const express = require('express');
+const bodyParser = require('body-parser');
 const mongoose = require('mongoose');
 const bcrypt = require('bcryptjs');
-const bodyParser = require('body-parser');
+const jwt = require('jsonwebtoken');
+
 const app = express();
+const PORT = 3000;
 
+// Middleware
 app.use(bodyParser.json());
+app.use(bodyParser.urlencoded({ extended: true }));
 
-// MongoDB connection
-const mongoURI = process.env.MONGO_URI || 'mongodb+srv://<username>:<password>@cluster0.mongodb.net/<database>?retryWrites=true&w=majority';
+// MongoDB Atlas connection
+const mongoURI = 'mongodb+srv://tomandrewsdev:Bankai1234@cluster0.dpytrg9.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0';
+mongoose.connect(mongoURI, { useNewUrlParser: true, useUnifiedTopology: true })
+    .then(() => console.log('Connected to MongoDB Atlas'))
+    .catch((err) => console.error('Error connecting to MongoDB Atlas:', err));
 
-mongoose
-    .connect(mongoURI, { useNewUrlParser: true, useUnifiedTopology: true })
-    .then(() => console.log('Connected to MongoDB'))
-    .catch((err) => console.error('MongoDB connection error:', err));
-
-// Define user schema and model
+// User schema and model
 const userSchema = new mongoose.Schema({
     firstname: { type: String, required: true },
     email: { type: String, required: true, unique: true },
@@ -28,10 +31,31 @@ app.post('/signup', async (req, res) => {
     const { firstname, email, password } = req.body;
 
     try {
+        // Check if the email already exists
+        const existingUser = await User.findOne({ email });
+        if (existingUser) {
+            return res.status(400).json({ message: 'Email already exists.' });
+        }
+
+        // Hash the password
         const hashedPassword = await bcrypt.hash(password, 10);
+
+        // Create a new user
         const newUser = new User({ firstname, email, password: hashedPassword });
         await newUser.save();
-        res.status(201).json({ message: 'User created successfully.' });
+
+        // Generate a JWT token (optional)
+        const token = jwt.sign({ id: newUser._id }, 'your_jwt_secret', { expiresIn: '1h' });
+
+        // Send a JSON response with the token and user info
+        res.status(201).json({
+            message: 'Signup successful.',
+            token,
+            user: {
+                email: newUser.email,
+                firstname: newUser.firstname,
+            },
+        });
     } catch (err) {
         if (err.code === 11000) {
             res.status(400).json({ message: 'Email already exists.' });
@@ -46,22 +70,39 @@ app.post('/login', async (req, res) => {
     const { email, password } = req.body;
 
     try {
+        // Find the user by email
         const user = await User.findOne({ email });
         if (!user) {
             return res.status(400).json({ message: 'User not found.' });
         }
 
+        // Compare passwords
         const isMatch = await bcrypt.compare(password, user.password);
         if (!isMatch) {
             return res.status(400).json({ message: 'Invalid credentials.' });
         }
 
-        res.status(200).json({ message: 'Login successful.' });
+        // Generate a JWT token (optional)
+        const token = jwt.sign({ id: user._id }, 'your_jwt_secret', { expiresIn: '1h' });
+
+        // Send a JSON response with the token and user info
+        res.status(200).json({
+            message: 'Login successful.',
+            token,
+            user: {
+                email: user.email,
+                firstname: user.firstname,
+            },
+        });
     } catch (err) {
         res.status(500).json({ message: 'Server error.' });
     }
 });
 
 // Start the server
-const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+app.listen(PORT, () => {
+    console.log(`Server running on http://localhost:${PORT}`);
+});
+
+const path = require('path'); // Import the path module
+
